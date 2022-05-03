@@ -4,7 +4,7 @@
 
 A simple CDK application written in TypeScript. It describes a Lambda function (and suitable IAM role & policy) which looks up EC2 instances which are tagged with a specific value of "deployment-id" and creates EBS snapshots of and data volumes attached to the instances.
 
-The structure of the CDK code is based on: https://bobbyhadz.com/blog/aws-cdk-typescript-lambda
+ The CDK infra code was derived from: https://bobbyhadz.com/blog/aws-cdk-typescript-lambda
 
 ## How to deploy the CDK app
 
@@ -26,14 +26,16 @@ The structure of the CDK code is based on: https://bobbyhadz.com/blog/aws-cdk-ty
 ## How to use the Lambda function
 
 1. In the AWS Console, browse to _Lambda_ -> _Functions_ and select the function starting `cdk-lambda-stack.....`
-2. Click _Test_ -> _Configure test event_
-3. For the event payload, pass JSON containing a `deploymentId` and optionally a `releaseId`:
+1. Click _Test_ -> _Configure test event_
+1. For the event payload, pass JSON containing a `deploymentId` and optionally a `releaseId`:
+
      ```json
      {
        "deploymentId": "foobar",
        "releaseId": "r1344423"
      }
      ```
-4. Give the test event a name and save it
-5. Click the _Test_ button
-6. The console output should tell you the success of the invocation. Note: no snapshot will be created unless your AWS account contains an EC2 instance tagged with `deploymentId: foobar` which has multiple EBS volumes attached.
+
+1. Give the test event a name and save it
+1. Click the _Test_ button
+1. The console output should tell you the success of the invocation. Note: no snapshot will be created unless your AWS account contains an EC2 instance tagged with `deploymentId: foobar` which has multiple EBS volumes attached.
