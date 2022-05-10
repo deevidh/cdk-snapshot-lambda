@@ -6,6 +6,7 @@
  *
  */
 
+import { ModifySnapshotTierCommand } from "@aws-sdk/client-ec2";
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import EC2, { Instance } from "aws-sdk/clients/ec2";
 
@@ -20,7 +21,7 @@ export async function main(
   }
 
   const deploymentId = event.deploymentId;
-  const releaseId = event.releaseId ? event.releaseId : null; // releaseId can be optionally supplied
+  const releaseId = event.releaseId ?? null; // releaseId can be optionally supplied
 
   await snapshotDeploymentInstances(deploymentId, releaseId);
 
@@ -34,6 +35,7 @@ async function snapshotDeploymentInstances(
   deploymentId: string,
   releaseId: string | null
 ) {
+  let snapshots: string[] = []
   try {
     const ec2_client = new EC2();
     let instances: Instance[] = [];
@@ -52,7 +54,7 @@ async function snapshotDeploymentInstances(
           console.log(
             `${found_instance.InstanceId} - Found instance for deploymentId ${deploymentId}`
           );
-          await snapshotEC2Instance(ec2_client, found_instance, releaseId);
+          snapshots.push(...await snapshotEC2Instance(ec2_client, found_instance, releaseId));
         }));
       }));
     }
@@ -66,13 +68,15 @@ async function snapshotDeploymentInstances(
       throw ex;
     }
   }
+  console.log(`List of snapshots created: ${snapshots}`)
 }
 
 async function snapshotEC2Instance(
   ec2_client: EC2,
   instance: Instance,
-  releaseId: string | null
-) {
+  releaseId: string | null,
+  snapshots: string[] = []
+): Promise<string[]> {
   await Promise.all(instance.BlockDeviceMappings!.map(async (block_device_mapping) => {
     // Only snapshot data volumes (not root volume)
     if (block_device_mapping.DeviceName == '/dev/xvda') {
@@ -125,8 +129,10 @@ async function snapshotEC2Instance(
       };
 
       const snapshot_response = await ec2_client.createSnapshot(params).promise();
-      console.log(`${instance.InstanceId!} - Snapshot created ${snapshot_response.SnapshotId!}`)
+      console.log(`${instance.InstanceId!} - Snapshot created ${snapshot_response.SnapshotId!} for ${block_device_mapping!.Ebs!.VolumeId!}`)
+      snapshots.push(snapshot_response.SnapshotId!);
     }
   }
   ));
+  return snapshots;
 }
